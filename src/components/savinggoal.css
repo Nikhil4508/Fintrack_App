@@ -1,0 +1,13 @@
+/* For WebKit browsers (Chrome, Edge, Safari) */
+.custom-scrollbar {
+  overflow-y: scroll;       /* or overflow: auto */
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 0px;
+}
+
+/* For Firefox */
+.custom-scrollbar {
+  scrollbar-color: transparent;
+}

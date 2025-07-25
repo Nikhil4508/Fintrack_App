@@ -1,0 +1,88 @@
+const initialTransactions = [
+  {
+    id: 1,
+    date: "08/01/25",
+    desc: "Monthly Salary",
+    cat: "Income",
+    amt: "+$3,500.00",
+  },
+  {
+    id: 2,
+    date: "07/01/25",
+    desc: "Grocery Shopping",
+    cat: "Groceries",
+    amt: "-$85.50",
+  },
+  {
+    id: 3,
+    date: "07/01/25",
+    desc: "Electric Bill",
+    cat: "Utilities",
+    amt: "-$120.00",
+  },
+  {
+    id: 4,
+    date: "06/01/25",
+    desc: "Restaurant Dinner",
+    cat: "Dining",
+    amt: "-$65.00",
+  },
+  {
+    id: 5,
+    date: "05/01/25",
+    desc: "Gas Station",
+    cat: "Transportation",
+    amt: "-$45.00",
+  },
+  {
+    id: 6,
+    date: "05/01/25",
+    desc: "Freelance Project",
+    cat: "Income",
+    amt: "+$500.00",
+  },
+  {
+    id: 7,
+    date: "04/01/25",
+    desc: "Movie Tickets",
+    cat: "Entertainment",
+    amt: "-$30.00",
+  },
+  {
+    id: 8,
+    date: "03/01/25",
+    desc: "Online Shopping",
+    cat: "Shopping",
+    amt: "-$150.00",
+  },
+  {
+    id: 9,
+    date: "02/01/25",
+    desc: "Coffee Shop",
+    cat: "Dining",
+    amt: "-$12.50",
+  },
+  {
+    id: 10,
+    date: "01/01/25",
+    desc: "Internet Bill",
+    cat: "Utilities",
+    amt: "-$59.99",
+  },
+  {
+    id: 11,
+    date: "30/12/24",
+    desc: "Grocery Shopping",
+    cat: "Groceries",
+    amt: "-$92.30",
+  },
+  {
+    id: 12,
+    date: "28/12/24",
+    desc: "Gym Membership",
+    cat: "Health",
+    amt: "-$50.00",
+  },
+];
+
+export default initialTransactions;
