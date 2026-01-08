@@ -23,20 +23,27 @@ const Settingmodal = ({ onClose }) => {
         const reader = new FileReader();
         reader.onloadend = async () => {
           const imageData = reader.result;
+          const currentUser = auth.currentUser;
+
+          if (!currentUser?.email) {
+            setError("User not authenticated");
+            setIsUploading(false);
+            return;
+          }
+
+          // Use user-specific localStorage key
+          const storageKey = `profileImage_${currentUser.email}`;
 
           // Update context and localStorage (primary method)
           setImage(imageData);
-          localStorage.setItem("profileImage", imageData);
+          localStorage.setItem(storageKey, imageData);
 
           // Try to update Firebase (optional - may fail with large images)
           try {
-            const currentUser = auth.currentUser;
-            if (currentUser) {
-              // Store a flag in Firebase instead of the full image
-              await updateProfile(currentUser, {
-                photoURL: "localStorage",
-              });
-            }
+            // Store a flag in Firebase instead of the full image
+            await updateProfile(currentUser, {
+              photoURL: "localStorage",
+            });
           } catch (firebaseError) {
             console.log("Firebase update skipped:", firebaseError.message);
             // Continue anyway - localStorage is our primary storage

@@ -14,22 +14,29 @@ const Avatar = ({ user, size = "md", className = "" }) => {
   const style = getAvatarStyle(avatarData.color, size);
   const [localImage, setLocalImage] = useState(null);
 
-  // Check localStorage for custom profile image
+  // Check localStorage for custom profile image (user-specific)
   useEffect(() => {
-    const storedImage = localStorage.getItem("profileImage");
-    setLocalImage(storedImage);
+    if (!user?.email) {
+      setLocalImage(null);
+      return;
+    }
+
+    // Use email as key to make it user-specific
+    const storageKey = `profileImage_${user.email}`;
+    const storedImage = localStorage.getItem(storageKey);
+    setLocalImage(storedImage || null);
 
     // Listen for avatar updates
     const handleAvatarUpdate = () => {
-      const updatedImage = localStorage.getItem("profileImage");
-      setLocalImage(updatedImage);
+      const updatedImage = localStorage.getItem(storageKey);
+      setLocalImage(updatedImage || null);
     };
 
     window.addEventListener("avatarUpdated", handleAvatarUpdate);
     return () => {
       window.removeEventListener("avatarUpdated", handleAvatarUpdate);
     };
-  }, []);
+  }, [user?.email]);
 
   // Priority: localStorage image > Firebase photoURL > initials
   if (localImage) {
