@@ -24,17 +24,23 @@ const Settingmodal = ({ onClose }) => {
         reader.onloadend = async () => {
           const imageData = reader.result;
 
-          // Update Firebase user profile with photoURL
-          const currentUser = auth.currentUser;
-          if (currentUser) {
-            await updateProfile(currentUser, {
-              photoURL: imageData,
-            });
-          }
-
-          // Update context and localStorage for backward compatibility
+          // Update context and localStorage (primary method)
           setImage(imageData);
           localStorage.setItem("profileImage", imageData);
+
+          // Try to update Firebase (optional - may fail with large images)
+          try {
+            const currentUser = auth.currentUser;
+            if (currentUser) {
+              // Store a flag in Firebase instead of the full image
+              await updateProfile(currentUser, {
+                photoURL: "localStorage",
+              });
+            }
+          } catch (firebaseError) {
+            console.log("Firebase update skipped:", firebaseError.message);
+            // Continue anyway - localStorage is our primary storage
+          }
 
           setIsUploading(false);
 

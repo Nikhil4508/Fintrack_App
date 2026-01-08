@@ -1,5 +1,5 @@
-import React from 'react';
-import { getAvatarData, getAvatarStyle } from '../lib/helper/avatarHelper';
+import React, { useState, useEffect } from "react";
+import { getAvatarData, getAvatarStyle } from "../lib/helper/avatarHelper";
 
 /**
  * Avatar Component
@@ -9,19 +9,56 @@ import { getAvatarData, getAvatarStyle } from '../lib/helper/avatarHelper';
  * @param {string} size - Size of avatar: 'xs', 'sm', 'md', 'lg', 'xl', '2xl'
  * @param {string} className - Additional CSS classes
  */
-const Avatar = ({ user, size = 'md', className = '' }) => {
+const Avatar = ({ user, size = "md", className = "" }) => {
   const avatarData = getAvatarData(user);
   const style = getAvatarStyle(avatarData.color, size);
+  const [localImage, setLocalImage] = useState(null);
 
-  if (avatarData.hasPhoto && avatarData.photoURL) {
-    // Display user's photo
+  // Check localStorage for custom profile image
+  useEffect(() => {
+    const storedImage = localStorage.getItem("profileImage");
+    setLocalImage(storedImage);
+
+    // Listen for avatar updates
+    const handleAvatarUpdate = () => {
+      const updatedImage = localStorage.getItem("profileImage");
+      setLocalImage(updatedImage);
+    };
+
+    window.addEventListener("avatarUpdated", handleAvatarUpdate);
+    return () => {
+      window.removeEventListener("avatarUpdated", handleAvatarUpdate);
+    };
+  }, []);
+
+  // Priority: localStorage image > Firebase photoURL > initials
+  if (localImage) {
+    return (
+      <img
+        src={localImage}
+        alt={user?.displayName || user?.email || "User"}
+        style={{
+          ...style,
+          objectFit: "cover",
+        }}
+        className={className}
+      />
+    );
+  }
+
+  if (
+    avatarData.hasPhoto &&
+    avatarData.photoURL &&
+    avatarData.photoURL !== "localStorage"
+  ) {
+    // Display user's photo from Firebase
     return (
       <img
         src={avatarData.photoURL}
-        alt={user?.displayName || user?.email || 'User'}
+        alt={user?.displayName || user?.email || "User"}
         style={{
           ...style,
-          objectFit: 'cover',
+          objectFit: "cover",
         }}
         className={className}
       />
@@ -33,7 +70,7 @@ const Avatar = ({ user, size = 'md', className = '' }) => {
     <div
       style={style}
       className={className}
-      title={user?.displayName || user?.email || 'User'}
+      title={user?.displayName || user?.email || "User"}
     >
       {avatarData.initials}
     </div>
