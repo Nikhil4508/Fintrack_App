@@ -128,7 +128,7 @@ const Header = () => {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[var(--border-color)] bg-[var(--background-color)] backdrop-blur-sm supports-[backdrop-filter]:bg-background/60 px-6">
       <div className=" flex h-14 items-center">
-        <div className="mr-4 hidden md:flex text-[var(--heading-text)]">
+        <div className="mr-4 flex text-[var(--heading-text)]">
           <Link to="/dashboard" className="mr-6 flex items-center space-x-2">
             <svg
               xmlns="http://www.w3.org/2000/svg"
