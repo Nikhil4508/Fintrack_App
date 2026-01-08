@@ -37,6 +37,10 @@ const Settingmodal = ({ onClose }) => {
           localStorage.setItem("profileImage", imageData);
 
           setIsUploading(false);
+
+          // Dispatch custom event to update avatar across all components
+          window.dispatchEvent(new Event("avatarUpdated"));
+
           onClose(); // Close the modal after uploading the image
         };
         reader.onerror = () => {

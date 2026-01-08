@@ -47,6 +47,22 @@ const Settings = () => {
     return () => unsubscribe();
   }, []);
 
+  // Listen for avatar update events
+  useEffect(() => {
+    const handleAvatarUpdate = () => {
+      // Force refresh of current user to get updated photoURL
+      const user = auth.currentUser;
+      if (user) {
+        setCurrentUser({ ...user });
+      }
+    };
+
+    window.addEventListener("avatarUpdated", handleAvatarUpdate);
+    return () => {
+      window.removeEventListener("avatarUpdated", handleAvatarUpdate);
+    };
+  }, []);
+
   // Update active tab when location state changes
   useEffect(() => {
     if (location.state?.tab) {

@@ -82,6 +82,23 @@ const Header = () => {
     return () => unsubscribe();
   }, []);
 
+  // Listen for avatar update events
+  useEffect(() => {
+    const handleAvatarUpdate = () => {
+      // Force refresh of current user to get updated photoURL
+      const user = auth.currentUser;
+      if (user) {
+        // Trigger a re-render by updating the state
+        setCurrentUser({ ...user });
+      }
+    };
+
+    window.addEventListener("avatarUpdated", handleAvatarUpdate);
+    return () => {
+      window.removeEventListener("avatarUpdated", handleAvatarUpdate);
+    };
+  }, []);
+
   const toggleTheme = () => {
     setTheme(theme === "dark-theme" ? "light-theme" : "dark-theme");
   };
