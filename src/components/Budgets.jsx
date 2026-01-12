@@ -20,6 +20,8 @@ import BudgetUpdateModal from "./BudgetUpdateModal";
 import "./budget.css";
 import initialBudgets from "../data/initialBudgets";
 import { getUserStorageKey, isDemoUser } from "../lib/helper/demoUser";
+import { showBudgetAlert } from "../lib/notificationPreferences";
+import { formatCurrency, getCurrencySymbol } from "../lib/userPreferences";
 
 // Define color mapping for progress bars
 const PROGRESS_COLORS = {
@@ -47,13 +49,14 @@ const CATEGORY_ICONS = {
   // Add more categories as needed
 };
 
-// Helper to parse "$350.00 / $500.00" to [350, 500]
+// Helper to parse "$350.00 / $500.00" or "€350.00 / €500.00" to [350, 500]
 function parseAmt(amtStr) {
   if (!amtStr) return [0, 0];
-  const match = amtStr.match(/\$([\d,]+\.\d{2})\s*\/\s*\$([\d,]+\.\d{2})/);
-  if (match) {
-    const spent = parseFloat(match[1].replace(/,/g, ""));
-    const total = parseFloat(match[2].replace(/,/g, ""));
+  // Currency-agnostic: extract numbers from any currency format
+  const parts = amtStr.split("/").map((s) => s.trim().replace(/[^\d.-]/g, ""));
+  if (parts.length === 2) {
+    const spent = parseFloat(parts[0]) || 0;
+    const total = parseFloat(parts[1]) || 0;
     return [spent, total];
   }
   return [0, 0];
@@ -63,22 +66,62 @@ const Budgets = () => {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState(null);
 
+  // Get currency symbol from user preferences
+  const [currencySymbol, setCurrencySymbol] = useState(() => {
+    const prefs = localStorage.getItem("fintrack_preferences");
+    const currency = prefs ? JSON.parse(prefs).currency : "USD - US Dollar";
+    return getCurrencySymbol(currency);
+  });
+
+  // Listen for preference changes
+  useEffect(() => {
+    const handlePreferenceChange = () => {
+      const prefs = localStorage.getItem("fintrack_preferences");
+      const currency = prefs ? JSON.parse(prefs).currency : "USD - US Dollar";
+      setCurrencySymbol(getCurrencySymbol(currency));
+    };
+
+    window.addEventListener("preferencesChanged", handlePreferenceChange);
+    return () => {
+      window.removeEventListener("preferencesChanged", handlePreferenceChange);
+    };
+  }, []);
+
   const [categoryBudgetCards, setCategoryBudgetCards] = useState(() => {
     const storageKey = getUserStorageKey("fintrack_category_budgets");
     const stored = localStorage.getItem(storageKey);
+
+    // Helper to update currency symbols in stored data
+    const updateCurrencyInData = (data) => {
+      return data.map((budget) => {
+        // Parse amounts and reformat with current currency
+        const [spentStr, totalStr] = budget.amt
+          .split("/")
+          .map((s) => s.trim().replace(/[^\d.-]/g, ""));
+        const spent = parseFloat(spentStr) || 0;
+        const total = parseFloat(totalStr) || 0;
+        const remaining = total - spent;
+
+        return {
+          ...budget,
+          amt: `${formatCurrency(spent)} / ${formatCurrency(total)}`,
+          remain: formatCurrency(remaining),
+          icon: CATEGORY_ICONS[budget.title] || ShoppingCart,
+        };
+      });
+    };
+
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        // Restore icon property as component function
-        return parsed.map((tx) => ({
-          ...tx,
-          icon: CATEGORY_ICONS[tx.title] || ShoppingCart,
-        }));
+        return updateCurrencyInData(parsed);
       } catch {
-        return isDemoUser() ? initialBudgets : [];
+        const demoData = isDemoUser() ? initialBudgets : [];
+        return updateCurrencyInData(demoData);
       }
     }
-    return isDemoUser() ? initialBudgets : [];
+    const demoData = isDemoUser() ? initialBudgets : [];
+    return updateCurrencyInData(demoData);
   });
 
   // Save to localStorage whenever categoryBudgetCards changes
@@ -92,20 +135,55 @@ const Budgets = () => {
 
   // Add new category budget
   const addCategoryBudget = (newBudget) => {
+    const formattedAmount = formatCurrency(parseFloat(newBudget.amount));
     setCategoryBudgetCards((prev) => [
       ...prev,
       {
         ...newBudget,
         icon: CATEGORY_ICONS[newBudget.title] || ShoppingCart, // fallback icon
         used: "0%",
-        remain: `$${newBudget.amount}`,
-        amt: `$0.00 / $${newBudget.amount}`,
+        remain: formattedAmount,
+        amt: `${formatCurrency(0)} / ${formattedAmount}`,
         color: "red",
         period: newBudget.period || "Monthly",
       },
     ]);
     setShowModal(false);
   };
+
+  // Update budget amounts when currency preference changes
+  useEffect(() => {
+    const handlePreferenceChange = () => {
+      const prefs = localStorage.getItem("fintrack_preferences");
+      const currency = prefs ? JSON.parse(prefs).currency : "USD - US Dollar";
+      const symbol = getCurrencySymbol(currency);
+      setCurrencySymbol(symbol);
+
+      // Update all budget amounts with new currency symbol
+      setCategoryBudgetCards((prev) =>
+        prev.map((budget) => {
+          // Parse the amt string to extract numeric values
+          const [spentStr, totalStr] = budget.amt
+            .split("/")
+            .map((s) => s.trim().replace(/[^\d.-]/g, ""));
+          const spent = parseFloat(spentStr) || 0;
+          const total = parseFloat(totalStr) || 0;
+          const remaining = total - spent;
+
+          return {
+            ...budget,
+            amt: `${formatCurrency(spent)} / ${formatCurrency(total)}`,
+            remain: formatCurrency(remaining),
+          };
+        }),
+      );
+    };
+
+    window.addEventListener("preferencesChanged", handlePreferenceChange);
+    return () => {
+      window.removeEventListener("preferencesChanged", handlePreferenceChange);
+    };
+  }, []);
 
   const [showModal, setShowModal] = useState(false);
 
@@ -123,9 +201,21 @@ const Budgets = () => {
   // Handle updating the budget
   const handleUpdateBudget = (updatedBudget) => {
     setCategoryBudgetCards((prev) =>
-      prev.map((b) =>
-        b.title === updatedBudget.title ? { ...b, ...updatedBudget } : b,
-      ),
+      prev.map((b) => {
+        if (b.title === updatedBudget.title) {
+          // Check if we should show a notification
+          const [spent, total] = parseAmt(updatedBudget.amt);
+          const percentage = total > 0 ? Math.round((spent / total) * 100) : 0;
+
+          // Show notification if budget usage is significant
+          if (percentage >= 75) {
+            showBudgetAlert(updatedBudget.title, spent, total, percentage);
+          }
+
+          return { ...b, ...updatedBudget };
+        }
+        return b;
+      }),
     );
   };
 
@@ -167,7 +257,7 @@ const Budgets = () => {
     {
       title: "Monthly Overview",
       desc: "Your budget usage for this month",
-      amt: `$${totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2 })} / $${totalBudget.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+      amt: `${formatCurrency(totalSpent)} / ${formatCurrency(totalBudget)}`,
       progressinfo: "% of total budget used",
       color: "default",
       progress: overviewPercent,
@@ -175,7 +265,7 @@ const Budgets = () => {
     {
       title: "Remaining Budget",
       desc: "Amount left to spend this month",
-      amt: `$${totalRemain.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+      amt: formatCurrency(totalRemain),
       progressinfo: "% of total budget remaining",
       color: "green",
       progress: remainingPercent,
@@ -211,11 +301,11 @@ const Budgets = () => {
             Budgets
           </h2>
           <button
-            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-[var(--btn-primary-bg)] text-[var(--btn-text)]  hover:bg-[var(--btn-hover-bg)] h-10 px-4 py-2 cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-[var(--btn-primary-bg)] text-[var(--btn-text)]  hover:bg-[var(--btn-hover-bg)] h-10 md:px-4 px-2 py-2 cursor-pointer"
             onClick={() => setShowModal(true)}
           >
             <Plus />
-            Add Budgets
+            <span className="hidden md:inline">Add Budgets</span>
           </button>
         </div>
         {/* cards */}
@@ -288,20 +378,24 @@ const Budgets = () => {
                     ) : (
                       categoryBudgetCards.map((categoryItems) => (
                         <div className="space-y-2" key={categoryItems.title}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <span className="mr-2 text-lg">
-                                {" "}
-                                <categoryItems.icon />{" "}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-2 flex-1">
+                              <span className="text-lg mt-0.5">
+                                <categoryItems.icon />
                               </span>
-                              <span className="font-medium">
-                                {categoryItems.title}
-                                <span className="text-xs ml-2 text-[var(--sub-heading-text)]">
-                                  ({categoryItems.period || "Monthly"})
+                              <div className="flex flex-col">
+                                <span className="font-medium">
+                                  {categoryItems.title}
+                                  <span className="text-xs ml-2 text-[var(--sub-heading-text)]">
+                                    ({categoryItems.period || "Monthly"})
+                                  </span>
                                 </span>
-                              </span>
+                                <span className="text-sm text-[var(--heading-text)] md:hidden mt-1">
+                                  {categoryItems.amt}
+                                </span>
+                              </div>
                             </div>
-                            <div className="text-sm text-[var(--heading-text)]">
+                            <div className="hidden md:block text-sm text-[var(--heading-text)]">
                               {categoryItems.amt}
                             </div>
                           </div>

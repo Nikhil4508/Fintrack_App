@@ -13,6 +13,7 @@ import {
   EmailAuthProvider,
 } from "firebase/auth";
 import Avatar from "./Avatar";
+import { notifyPreferencesChanged } from "../lib/userPreferences";
 
 const Settings = () => {
   const location = useLocation();
@@ -32,6 +33,83 @@ const Settings = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState("");
+
+  // Notification preferences state - Load from localStorage
+  const [notifications, setNotifications] = useState(() => {
+    const saved = localStorage.getItem("fintrack_notifications");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return {
+          emailNotifications: true,
+          pushNotifications: true,
+          budgetAlerts: true,
+          paymentReminders: true,
+          savingsGoalsUpdates: true,
+        };
+      }
+    }
+    return {
+      emailNotifications: true,
+      pushNotifications: true,
+      budgetAlerts: true,
+      paymentReminders: true,
+      savingsGoalsUpdates: true,
+    };
+  });
+  const [notificationMessage, setNotificationMessage] = useState("");
+
+  // Preferences state - Load from localStorage
+  const [preferences, setPreferences] = useState(() => {
+    const saved = localStorage.getItem("fintrack_preferences");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return {
+          currency: "USD - US Dollar",
+          dateFormat: "MM/DD/YYYY",
+          startWeekOn: "Sunday",
+          autoCategorize: true,
+        };
+      }
+    }
+    return {
+      currency: "USD - US Dollar",
+      dateFormat: "MM/DD/YYYY",
+      startWeekOn: "Sunday",
+      autoCategorize: true,
+    };
+  });
+  const [preferenceMessage, setPreferenceMessage] = useState("");
+
+  // Dropdown states for preferences
+  const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
+  const [dateFormatDropdownOpen, setDateFormatDropdownOpen] = useState(false);
+  const [startWeekDropdownOpen, setStartWeekDropdownOpen] = useState(false);
+
+  // Currency options
+  const currencyOptions = [
+    "USD - US Dollar",
+    "EUR - Euro",
+    "GBP - British Pound",
+    "JPY - Japanese Yen",
+    "CAD - Canadian Dollar",
+    "AUD - Australian Dollar",
+    "INR - Indian Rupee",
+  ];
+
+  // Date format options
+  const dateFormatOptions = [
+    "MM/DD/YYYY",
+    "DD/MM/YYYY",
+    "YYYY-MM-DD",
+    "DD-MM-YYYY",
+  ];
+
+  // Start week options
+  const startWeekOptions = ["Sunday", "Monday"];
 
   // Get current user from Firebase
   useEffect(() => {
@@ -166,6 +244,60 @@ const Settings = () => {
     }
   };
 
+  // Toggle notification setting
+  const toggleNotification = (key) => {
+    setNotifications((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  // Save notification preferences
+  const handleSaveNotifications = () => {
+    try {
+      localStorage.setItem(
+        "fintrack_notifications",
+        JSON.stringify(notifications),
+      );
+      setNotificationMessage("Notification preferences saved successfully!");
+      setTimeout(() => setNotificationMessage(""), 3000);
+    } catch (error) {
+      console.error("Error saving notifications:", error);
+      setNotificationMessage("Error saving preferences. Please try again.");
+      setTimeout(() => setNotificationMessage(""), 3000);
+    }
+  };
+
+  // Update preference setting
+  const updatePreference = (key, value) => {
+    setPreferences((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  // Toggle auto-categorize
+  const toggleAutoCategorize = () => {
+    setPreferences((prev) => ({
+      ...prev,
+      autoCategorize: !prev.autoCategorize,
+    }));
+  };
+
+  // Save preferences
+  const handleSavePreferences = () => {
+    try {
+      localStorage.setItem("fintrack_preferences", JSON.stringify(preferences));
+      notifyPreferencesChanged(); // Notify all components of preference change
+      setPreferenceMessage("Preferences saved successfully!");
+      setTimeout(() => setPreferenceMessage(""), 3000);
+    } catch (error) {
+      console.error("Error saving preferences:", error);
+      setPreferenceMessage("Error saving preferences. Please try again.");
+      setTimeout(() => setPreferenceMessage(""), 3000);
+    }
+  };
+
   return (
     <>
       {showModal && <Settingmodal onClose={() => setShowModal(false)} />}
@@ -175,10 +307,10 @@ const Settings = () => {
             Settings
           </h2>
         </div>
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="rounded-lg border border-[var(--border-color)] bg-[var(--background-color)] text-[var(--heading-text)] shadow-sm md:w-1/3">
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="rounded-lg border border-[var(--border-color)] bg-[var(--background-color)] text-[var(--heading-text)] shadow-sm lg:w-1/3 w-full">
             <div className="p-6 pt-6 ">
-              <div className="flex flex-col items-center  space-y-4">
+              <div className="flex flex-col items-center space-y-4">
                 <Avatar user={currentUser} size="2xl" />
                 <div className="space-y-1 text-center">
                   <h3 className="text-xl font-semibold">
@@ -216,31 +348,31 @@ const Settings = () => {
           <div className="flex-1">
             <div className="space-y-4">
               {/* top button */}
-              <div className="h-10 items-center justify-center rounded-md bg-[var(--sub-background-color)] p-1 text-[var(--sub-heading-text)] grid grid-cols-2 md:grid-cols-4">
+              <div className="h-auto md:h-10 items-center justify-center rounded-md bg-[var(--sub-background-color)] p-1 text-[var(--sub-heading-text)] grid grid-cols-2 md:grid-cols-4 gap-1">
                 <button
                   type="button"
-                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer ${activeTab === "Appearance" ? "bg-[var(--background-color)] text-[var(--heading-text)] shadow-sm" : ""}`}
+                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-2 md:px-3 py-1.5 text-xs md:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer ${activeTab === "Appearance" ? "bg-[var(--background-color)] text-[var(--heading-text)] shadow-sm" : ""}`}
                   onClick={() => setActiveTab("Appearance")}
                 >
                   Appearance
                 </button>
                 <button
                   type="button"
-                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer ${activeTab === "Profile" ? "bg-[var(--background-color)] text-[var(--heading-text)] shadow-sm" : ""}`}
+                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-2 md:px-3 py-1.5 text-xs md:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer ${activeTab === "Profile" ? "bg-[var(--background-color)] text-[var(--heading-text)] shadow-sm" : ""}`}
                   onClick={() => setActiveTab("Profile")}
                 >
                   Profile
                 </button>
                 <button
                   type="button"
-                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer ${activeTab === "Notifications" ? "bg-[var(--background-color)] text-[var(--heading-text)] shadow-sm" : ""}`}
+                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-2 md:px-3 py-1.5 text-xs md:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer ${activeTab === "Notifications" ? "bg-[var(--background-color)] text-[var(--heading-text)] shadow-sm" : ""}`}
                   onClick={() => setActiveTab("Notifications")}
                 >
                   Notifications
                 </button>
                 <button
                   type="button"
-                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer ${activeTab === "Preferences" ? "bg-[var(--background-color)] text-[var(--heading-text)] shadow-sm" : ""}`}
+                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-2 md:px-3 py-1.5 text-xs md:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer ${activeTab === "Preferences" ? "bg-[var(--background-color)] text-[var(--heading-text)] shadow-sm" : ""}`}
                   onClick={() => setActiveTab("Preferences")}
                 >
                   Preferences
@@ -286,7 +418,7 @@ const Settings = () => {
                                 stroke-width="2"
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
-                                className="mb-3 h-6 w-6 lucide lucide-sun-icon lucide-sun"
+                                className="md:mb-3 h-6 w-6 lucide lucide-sun-icon lucide-sun"
                               >
                                 <circle cx="12" cy="12" r="4" />
                                 <path d="M12 2v2" />
@@ -298,7 +430,7 @@ const Settings = () => {
                                 <path d="m6.34 17.66-1.41 1.41" />
                                 <path d="m19.07 4.93-1.41 1.41" />
                               </svg>
-                              Light
+                              <span className="hidden md:inline">Light</span>
                             </label>
                           </div>
                           <div className="">
@@ -322,11 +454,11 @@ const Settings = () => {
                                 stroke-width="2"
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
-                                className="mb-3 h-6 w-6 lucide lucide-moon-icon lucide-moon"
+                                className="md:mb-3 h-6 w-6 lucide lucide-moon-icon lucide-moon"
                               >
                                 <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
                               </svg>
-                              Dark
+                              <span className="hidden md:inline">Dark</span>
                             </label>
                           </div>
                           <div className="">
@@ -350,7 +482,7 @@ const Settings = () => {
                                 stroke-width="2"
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
-                                className="mb-3 h-6 w-6 lucide lucide-monitor-icon lucide-monitor"
+                                className="md:mb-3 h-6 w-6 lucide lucide-monitor-icon lucide-monitor"
                               >
                                 <rect
                                   width="20"
@@ -362,7 +494,7 @@ const Settings = () => {
                                 <line x1="8" x2="16" y1="21" y2="21" />
                                 <line x1="12" x2="12" y1="17" y2="21" />
                               </svg>
-                              System
+                              <span className="hidden md:inline">System</span>
                             </label>
                           </div>
                         </div>
@@ -609,12 +741,14 @@ const Settings = () => {
                           </div>
                           <button
                             type="button"
-                            className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-[#000] data-[state=unchecked]:bg-[#E4E4E7]"
+                            onClick={() =>
+                              toggleNotification("emailNotifications")
+                            }
+                            className={`peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${notifications.emailNotifications ? "bg-[var(--btn-primary-bg)]" : "bg-[var(--sub-background-color)]"}`}
                             id="email-notifications"
                           >
                             <span
-                              data-state="unchecked"
-                              className="pointer-events-none block h-5 w-5 rounded-full bg-[#fff] shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
+                              className={`pointer-events-none block h-5 w-5 rounded-full bg-[var(--background-color)] shadow-lg ring-0 transition-transform ${notifications.emailNotifications ? "translate-x-5" : "translate-x-0"}`}
                             ></span>
                           </button>
                         </div>
@@ -644,10 +778,15 @@ const Settings = () => {
                           </div>
                           <button
                             type="button"
-                            className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-[#000] data-[state=unchecked]:bg-[#E4E4E7]"
+                            onClick={() =>
+                              toggleNotification("pushNotifications")
+                            }
+                            className={`peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${notifications.pushNotifications ? "bg-[var(--btn-primary-bg)]" : "bg-[var(--sub-background-color)]"}`}
                             id="push-notifications"
                           >
-                            <span className="pointer-events-none block h-5 w-5 rounded-full bg-[#fff] shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"></span>
+                            <span
+                              className={`pointer-events-none block h-5 w-5 rounded-full bg-[var(--background-color)] shadow-lg ring-0 transition-transform ${notifications.pushNotifications ? "translate-x-5" : "translate-x-0"}`}
+                            ></span>
                           </button>
                         </div>
                       </div>
@@ -665,10 +804,13 @@ const Settings = () => {
                           </label>
                           <button
                             type="button"
-                            className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-[#000] data-[state=unchecked]:bg-[#E4E4E7]"
+                            onClick={() => toggleNotification("budgetAlerts")}
+                            className={`peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${notifications.budgetAlerts ? "bg-[var(--btn-primary-bg)]" : "bg-[var(--sub-background-color)]"}`}
                             id="budget-alerts"
                           >
-                            <span className="pointer-events-none block h-5 w-5 rounded-full bg-[#fff] shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"></span>
+                            <span
+                              className={`pointer-events-none block h-5 w-5 rounded-full bg-[var(--background-color)] shadow-lg ring-0 transition-transform ${notifications.budgetAlerts ? "translate-x-5" : "translate-x-0"}`}
+                            ></span>
                           </button>
                         </div>
                         <div className="flex items-center justify-between text-[var(--heading-text)]">
@@ -680,10 +822,15 @@ const Settings = () => {
                           </label>
                           <button
                             type="button"
-                            className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-[#000] data-[state=unchecked]:bg-[#E4E4E7]"
+                            onClick={() =>
+                              toggleNotification("paymentReminders")
+                            }
+                            className={`peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${notifications.paymentReminders ? "bg-[var(--btn-primary-bg)]" : "bg-[var(--sub-background-color)]"}`}
                             id="payment-remainders"
                           >
-                            <span className="pointer-events-none block h-5 w-5 rounded-full bg-[#fff] shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"></span>
+                            <span
+                              className={`pointer-events-none block h-5 w-5 rounded-full bg-[var(--background-color)] shadow-lg ring-0 transition-transform ${notifications.paymentReminders ? "translate-x-5" : "translate-x-0"}`}
+                            ></span>
                           </button>
                         </div>
                         <div className="flex items-center justify-between text-[var(--heading-text)]">
@@ -695,17 +842,27 @@ const Settings = () => {
                           </label>
                           <button
                             type="button"
-                            className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-[#000] data-[state=unchecked]:bg-[#E4E4E7]"
+                            onClick={() =>
+                              toggleNotification("savingsGoalsUpdates")
+                            }
+                            className={`peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${notifications.savingsGoalsUpdates ? "bg-[var(--btn-primary-bg)]" : "bg-[var(--sub-background-color)]"}`}
                             id="savings-goals"
                           >
                             <span
-                              data-state="unchecked"
-                              class="pointer-events-none block h-5 w-5 rounded-full bg-[#fff] shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
+                              className={`pointer-events-none block h-5 w-5 rounded-full bg-[var(--background-color)] shadow-lg ring-0 transition-transform ${notifications.savingsGoalsUpdates ? "translate-x-5" : "translate-x-0"}`}
                             ></span>
                           </button>
                         </div>
                       </div>
-                      <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-[var(--btn-primary-bg)] text-[var(--btn-text)] hover:bg-primary/90 h-10 px-4 py-2 gap-2">
+                      {notificationMessage && (
+                        <div className="p-4 rounded-md bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 text-sm">
+                          {notificationMessage}
+                        </div>
+                      )}
+                      <button
+                        onClick={handleSaveNotifications}
+                        className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-[var(--btn-primary-bg)] text-[var(--btn-text)] hover:bg-[var(--btn-hover-bg)] h-10 px-4 py-2 gap-2 cursor-pointer"
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           width="24"
@@ -742,73 +899,141 @@ const Settings = () => {
                       </p>
                     </div>
                     <div className="p-6 pt-0 space-y-6">
-                      <div className="space-y-2">
+                      <div className="space-y-2 relative">
                         <label
                           className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          for="currency"
+                          htmlFor="currency"
                         >
                           Currency
                         </label>
                         <button
                           type="button"
-                          className="flex h-10 w-full items-center justify-between rounded-md border border-[var(--border-color)] bg-[var(--background-color)] px-3 py-2 text-sm ring-offset-background placeholder:text-[var(--sub-heading-text)] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 mt-2"
+                          onClick={() =>
+                            setCurrencyDropdownOpen(!currencyDropdownOpen)
+                          }
+                          className="flex h-10 w-full items-center justify-between rounded-md border border-[var(--border-color)] bg-[var(--background-color)] px-3 py-2 text-sm ring-offset-background placeholder:text-[var(--sub-heading-text)] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 mt-2 cursor-pointer"
                           id="currency"
                         >
-                          <span className="pointer-none">USD - US Dollar</span>
-                          <ChevronDown />
+                          <span className="pointer-none text-[var(--heading-text)]">
+                            {preferences.currency}
+                          </span>
+                          <ChevronDown className="text-[var(--sub-heading-text)]" />
                         </button>
+                        {currencyDropdownOpen && (
+                          <div className="absolute z-10 mt-1 w-full bg-[var(--background-color)] border border-[var(--border-color)] rounded-md shadow-lg max-h-60 overflow-auto">
+                            {currencyOptions.map((currency) => (
+                              <div
+                                key={currency}
+                                className={`px-4 py-2 cursor-pointer hover:bg-[var(--sub-background-color)] text-sm text-[var(--heading-text)] ${preferences.currency === currency ? "bg-[var(--sub-background-color)] font-semibold" : ""}`}
+                                onClick={() => {
+                                  updatePreference("currency", currency);
+                                  setCurrencyDropdownOpen(false);
+                                }}
+                              >
+                                {currency}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-2 relative">
                         <label
                           className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          for="data-format"
+                          htmlFor="data-format"
                         >
                           Date Format
                         </label>
                         <button
                           type="button"
-                          className="flex h-10 w-full items-center justify-between rounded-md border border-[var(--border-color)] bg-[var(--background-color)] px-3 py-2 text-sm ring-offset-background placeholder:text-[var(--sub-heading-text)] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 mt-2"
+                          onClick={() =>
+                            setDateFormatDropdownOpen(!dateFormatDropdownOpen)
+                          }
+                          className="flex h-10 w-full items-center justify-between rounded-md border border-[var(--border-color)] bg-[var(--background-color)] px-3 py-2 text-sm ring-offset-background placeholder:text-[var(--sub-heading-text)] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 mt-2 cursor-pointer"
                           id="data-format"
                         >
-                          <span className="pointer-none">MM/DD/YYYY</span>
-                          <ChevronDown />
+                          <span className="pointer-none text-[var(--heading-text)]">
+                            {preferences.dateFormat}
+                          </span>
+                          <ChevronDown className="text-[var(--sub-heading-text)]" />
                         </button>
+                        {dateFormatDropdownOpen && (
+                          <div className="absolute z-10 mt-1 w-full bg-[var(--background-color)] border border-[var(--border-color)] rounded-md shadow-lg max-h-60 overflow-auto">
+                            {dateFormatOptions.map((format) => (
+                              <div
+                                key={format}
+                                className={`px-4 py-2 cursor-pointer hover:bg-[var(--sub-background-color)] text-sm text-[var(--heading-text)] ${preferences.dateFormat === format ? "bg-[var(--sub-background-color)] font-semibold" : ""}`}
+                                onClick={() => {
+                                  updatePreference("dateFormat", format);
+                                  setDateFormatDropdownOpen(false);
+                                }}
+                              >
+                                {format}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       <div className="shrink-0 bg-[var(--sub-background-color)] h-[2px] w-full"></div>
 
-                      <div className="space-y-2">
+                      <div className="space-y-2 relative">
                         <div className="flex items-center justify-between">
                           <label
                             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            for="start-day"
+                            htmlFor="start-day"
                           >
                             Start Week On
                           </label>
-                          <button
-                            type="button"
-                            className="flex h-10 items-center justify-between rounded-md border border-[var(--border-color)] bg-[var(--background-color)] px-3 py-2 text-sm ring-offset-background placeholder:text-[var(--sub-heading-text)] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-[180px] "
-                            id="start-day"
-                          >
-                            <span className="pointer-none">Sunday</span>
-                            <ChevronDown />
-                          </button>
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setStartWeekDropdownOpen(!startWeekDropdownOpen)
+                              }
+                              className="flex h-10 items-center justify-between rounded-md border border-[var(--border-color)] bg-[var(--background-color)] px-3 py-2 text-sm ring-offset-background placeholder:text-[var(--sub-heading-text)] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-[180px] cursor-pointer"
+                              id="start-day"
+                            >
+                              <span className="pointer-none text-[var(--heading-text)]">
+                                {preferences.startWeekOn}
+                              </span>
+                              <ChevronDown className="text-[var(--sub-heading-text)]" />
+                            </button>
+                            {startWeekDropdownOpen && (
+                              <div className="absolute z-10 mt-1 w-full bg-[var(--background-color)] border border-[var(--border-color)] rounded-md shadow-lg">
+                                {startWeekOptions.map((day) => (
+                                  <div
+                                    key={day}
+                                    className={`px-4 py-2 cursor-pointer hover:bg-[var(--sub-background-color)] text-sm text-[var(--heading-text)] ${preferences.startWeekOn === day ? "bg-[var(--sub-background-color)] font-semibold" : ""}`}
+                                    onClick={() => {
+                                      updatePreference("startWeekOn", day);
+                                      setStartWeekDropdownOpen(false);
+                                    }}
+                                  >
+                                    {day}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <label
-                            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            for="auto-categorize"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            htmlFor="auto-categorize"
                           >
                             Auto-Categorize Transactions
                           </label>
                           <button
                             type="button"
-                            className="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-[#000] data-[state=unchecked]:bg-[#e4e4e7]"
+                            onClick={toggleAutoCategorize}
+                            className={`peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${preferences.autoCategorize ? "bg-[var(--btn-primary-bg)]" : "bg-[var(--sub-background-color)]"}`}
                             id="auto-categorize"
                           >
-                            <span className="pointer-events-none block h-5 w-5 rounded-full bg-[#fff] shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"></span>
+                            <span
+                              className={`pointer-events-none block h-5 w-5 rounded-full bg-[var(--background-color)] shadow-lg ring-0 transition-transform ${preferences.autoCategorize ? "translate-x-5" : "translate-x-0"}`}
+                            ></span>
                           </button>
                         </div>
                         <p className="text-sm text-[var(--sub-heading-text)]">
@@ -816,7 +1041,15 @@ const Settings = () => {
                           previous patterns.
                         </p>
                       </div>
-                      <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-[var(--btn-primary-bg)] text-[var(--btn-text)] hover:bg-primary/90 h-10 px-4 py-2 gap-2">
+                      {preferenceMessage && (
+                        <div className="p-4 rounded-md bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 text-sm">
+                          {preferenceMessage}
+                        </div>
+                      )}
+                      <button
+                        onClick={handleSavePreferences}
+                        className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-[var(--btn-primary-bg)] text-[var(--btn-text)] hover:bg-[var(--btn-hover-bg)] h-10 px-4 py-2 gap-2 cursor-pointer"
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           width="24"

@@ -14,6 +14,7 @@ import "./App.css";
 import { ImageProvider } from "./context/ImageContext";
 import { auth } from "./lib/helper/firebaseClient";
 import { onAuthStateChanged } from "firebase/auth";
+import { requestNotificationPermission } from "./lib/notificationPreferences";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -22,6 +23,13 @@ function App() {
     // Listen for auth state changes with Firebase
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setIsAuthenticated(!!user);
+
+      // Request notification permission when user logs in
+      if (user) {
+        requestNotificationPermission().then((permission) => {
+          console.log("Notification permission:", permission);
+        });
+      }
     });
 
     return () => {

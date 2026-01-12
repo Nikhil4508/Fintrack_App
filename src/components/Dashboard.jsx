@@ -29,6 +29,7 @@ import {
   PiggyBank,
   Tag,
 } from "lucide-react";
+import { formatCurrency, getCurrencySymbol } from "../lib/userPreferences";
 import { formatDateToLong } from "../lib/DateFormat";
 import initialSavingsGoals from "../data/initialSavingsGoals";
 import initialBudgets from "../data/initialBudgets";
@@ -144,6 +145,25 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("Overview");
+  const [currencySymbol, setCurrencySymbol] = useState(() => {
+    const prefs = localStorage.getItem("fintrack_preferences");
+    const currency = prefs ? JSON.parse(prefs).currency : "USD - US Dollar";
+    return getCurrencySymbol(currency);
+  });
+
+  // Listen for preference changes
+  useEffect(() => {
+    const handlePreferenceChange = () => {
+      const prefs = localStorage.getItem("fintrack_preferences");
+      const currency = prefs ? JSON.parse(prefs).currency : "USD - US Dollar";
+      setCurrencySymbol(getCurrencySymbol(currency));
+    };
+
+    window.addEventListener("preferencesChanged", handlePreferenceChange);
+    return () => {
+      window.removeEventListener("preferencesChanged", handlePreferenceChange);
+    };
+  }, []);
 
   // Transactions state from localStorage
   const [transactions, setTransactions] = useState(getInitialTransactions);
@@ -287,11 +307,9 @@ const Dashboard = () => {
   // Assume goal.amt is like "$1,000.00 / $5,000.00" (saved / target)
   const parseSavingsAmt = (amtStr) => {
     if (!amtStr) return 0;
-    const match = amtStr.match(/\$([\d,]+\.\d{2})/);
-    if (match) {
-      return parseFloat(match[1].replace(/,/g, ""));
-    }
-    return 0;
+    // Currency-agnostic: extract first number from any currency format
+    const cleaned = amtStr.replace(/[^\d.-]/g, "");
+    return parseFloat(cleaned) || 0;
   };
 
   const savings = latestSavingGoals.reduce(
@@ -304,29 +322,28 @@ const Dashboard = () => {
     {
       id: 1,
       title: "Total Balance",
-      price: totalBalance.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-      }),
+      price: formatCurrency(totalBalance).replace(/^\$/, ""),
       desc: "",
     },
     {
       id: 2,
       title: "Income",
-      price: income.toLocaleString(undefined, { minimumFractionDigits: 2 }),
+      price: formatCurrency(income).replace(/^\$|^€|^£|^¥|^C\$|^A\$|^₹/, ""),
       desc: "",
     },
     {
       id: 3,
       title: "Expenses",
-      price: Math.abs(expenses).toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-      }),
+      price: formatCurrency(Math.abs(expenses)).replace(
+        /^\$|^€|^£|^¥|^C\$|^A\$|^₹/,
+        "",
+      ),
       desc: "",
     },
     {
       id: 4,
       title: "Savings",
-      price: savings.toLocaleString(undefined, { minimumFractionDigits: 2 }),
+      price: formatCurrency(savings).replace(/^\$|^€|^£|^¥|^C\$|^A\$|^₹/, ""),
       desc: "",
     },
   ];
@@ -429,7 +446,10 @@ const Dashboard = () => {
               </h3>
             </div>
             <div className="p-6 pt-0">
-              <div className="text-2xl font-semibold">${items.price}</div>
+              <div className="text-2xl font-semibold">
+                {currencySymbol}
+                {items.price}
+              </div>
               <p className="text-xs text-[var(--sub-heading-text)]">
                 {items.desc}
               </p>

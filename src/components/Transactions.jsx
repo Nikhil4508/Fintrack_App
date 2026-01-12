@@ -4,6 +4,7 @@ import Transactionmodal from "./Transactionmodal";
 import TransactionDetailModal from "./TransactionDetailModal";
 import initialTransactions from "../data/initialTransactions";
 import { getUserStorageKey, isDemoUser } from "../lib/helper/demoUser";
+import { formatCurrency, getCurrencySymbol } from "../lib/userPreferences";
 
 // Helper function to parse dd/mm/yy to Date object
 function parseDate(dateStr) {
@@ -89,6 +90,13 @@ const Transactions = () => {
   // For per-row actions menu
   const [actionMenuOpenId, setActionMenuOpenId] = useState(null);
 
+  // Get currency symbol from user preferences
+  const [currencySymbol, setCurrencySymbol] = useState(() => {
+    const prefs = localStorage.getItem("fintrack_preferences");
+    const currency = prefs ? JSON.parse(prefs).currency : "USD - US Dollar";
+    return getCurrencySymbol(currency);
+  });
+
   // Handler to remove a transaction
   const removeTransaction = (id) => {
     setTransactions((prev) => prev.filter((tx) => tx.id !== id));
@@ -99,6 +107,20 @@ const Transactions = () => {
     setDetailModalTx(tx);
     setActionMenuOpenId(null); // Optionally close the action menu
   };
+
+  // Listen for preference changes
+  useEffect(() => {
+    const handlePreferenceChange = () => {
+      const prefs = localStorage.getItem("fintrack_preferences");
+      const currency = prefs ? JSON.parse(prefs).currency : "USD - US Dollar";
+      setCurrencySymbol(getCurrencySymbol(currency));
+    };
+
+    window.addEventListener("preferencesChanged", handlePreferenceChange);
+    return () => {
+      window.removeEventListener("preferencesChanged", handlePreferenceChange);
+    };
+  }, []);
 
   // Close action menu on outside click
   useEffect(() => {
@@ -122,21 +144,84 @@ const Transactions = () => {
   const [transactions, setTransactions] = useState(() => {
     const storageKey = getUserStorageKey("fintrack_transactions");
     const stored = localStorage.getItem(storageKey);
+    const prefs = localStorage.getItem("fintrack_preferences");
+    const currency = prefs ? JSON.parse(prefs).currency : "USD - US Dollar";
+    const symbol = getCurrencySymbol(currency);
+
+    // Helper to update currency symbol in amount
+    const updateCurrencyInAmount = (amt) => {
+      if (!amt) return amt;
+      // Extract numeric value and sign
+      const isNegative = amt.startsWith("-");
+      const numericValue = parseFloat(amt.replace(/[^0-9.-]/g, ""));
+      if (isNaN(numericValue)) return amt;
+      // Format with current currency
+      const formatted = numericValue.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      return `${isNegative ? "-" : "+"}${symbol}${formatted}`;
+    };
+
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        // Restore icon property as Ellipsis function
-        return parsed.map((tx) => ({ ...tx, icon: Ellipsis }));
+        // Restore icon property and update currency symbols
+        return parsed.map((tx) => ({
+          ...tx,
+          amt: updateCurrencyInAmount(tx.amt),
+          icon: Ellipsis,
+        }));
       } catch {
         // If demo user, show demo data, otherwise empty
         const demoData = isDemoUser() ? initialTransactions : [];
-        return demoData.map((tx) => ({ ...tx, icon: Ellipsis }));
+        return demoData.map((tx) => ({
+          ...tx,
+          amt: updateCurrencyInAmount(tx.amt),
+          icon: Ellipsis,
+        }));
       }
     }
     // If demo user, show demo data, otherwise empty
     const demoData = isDemoUser() ? initialTransactions : [];
-    return demoData.map((tx) => ({ ...tx, icon: Ellipsis }));
+    return demoData.map((tx) => ({
+      ...tx,
+      amt: updateCurrencyInAmount(tx.amt),
+      icon: Ellipsis,
+    }));
   });
+
+  // Update transaction amounts when currency preference changes
+  useEffect(() => {
+    const handlePreferenceChange = () => {
+      const prefs = localStorage.getItem("fintrack_preferences");
+      const currency = prefs ? JSON.parse(prefs).currency : "USD - US Dollar";
+      const symbol = getCurrencySymbol(currency);
+
+      setTransactions((prev) =>
+        prev.map((tx) => {
+          // Extract numeric value and sign from current amount
+          const isNegative = tx.amt.startsWith("-");
+          const numericValue = parseFloat(tx.amt.replace(/[^0-9.-]/g, ""));
+          if (isNaN(numericValue)) return tx;
+          // Format with new currency
+          const formatted = numericValue.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+          return {
+            ...tx,
+            amt: `${isNegative ? "-" : "+"}${symbol}${formatted}`,
+          };
+        }),
+      );
+    };
+
+    window.addEventListener("preferencesChanged", handlePreferenceChange);
+    return () => {
+      window.removeEventListener("preferencesChanged", handlePreferenceChange);
+    };
+  }, []);
 
   // Save transactions to localStorage whenever they change
   useEffect(() => {
@@ -151,9 +236,15 @@ const Transactions = () => {
 
   // Handler to add a new transaction
   const addTransaction = (newTx) => {
+    // Convert amount to use current currency symbol
+    const numericAmount = parseFloat(newTx.amt.replace(/[^0-9.-]/g, ""));
+    const isNegative = newTx.amt.startsWith("-");
+    const formattedAmount = `${isNegative ? "-" : "+"}${formatCurrency(Math.abs(numericAmount))}`;
+
     setTransactions((prev) => [
       {
         ...newTx,
+        amt: formattedAmount,
         id: prev.length ? Math.max(...prev.map((t) => t.id)) + 1 : 1,
         icon: Ellipsis,
       },
@@ -284,11 +375,11 @@ const Transactions = () => {
             Transactions
           </h2>
           <button
-            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-[var(--btn-primary-bg)] text-[var(--btn-text)] hover:bg-[var(--btn-hover-bg)] h-10 px-4 py-2 cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-[var(--btn-primary-bg)] text-[var(--btn-text)] hover:bg-[var(--btn-hover-bg)] h-10 md:px-4 px-2 py-2 cursor-pointer"
             onClick={() => setShowModal(true)}
           >
             <Plus />
-            Add Transaction
+            <span className="hidden md:inline">Add Transaction</span>
           </button>
         </div>
         <div className="space-y-4">
@@ -318,8 +409,8 @@ const Transactions = () => {
               </button>
             </div>
             {/* searchbar */}
-            <div className="flex gap-2">
-              <div className="grid w-full max-w-sm items-center gap-1.5">
+            <div className="flex gap-2 flex-1">
+              <div className="grid w-full flex-1 md:max-w-sm items-center gap-1.5">
                 <label
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 sr-only"
                   htmlFor="search"
@@ -336,13 +427,13 @@ const Transactions = () => {
                 />
               </div>
               {/* category wise dropdown */}
-              <div className="relative" ref={dropdownRef}>
+              <div className="relative flex-shrink-0" ref={dropdownRef}>
                 <button
                   type="button"
-                  className="flex items-center justify-between rounded-md border border-[var(--sub-background-color)] bg-[var(--background-color)] px-3 py-2 text-sm ring-offset-[var(--background-color)] placeholder:text-[var(--sub-heading-text)] focus:outline-none focus:ring-2 focus:ring-[var(--sub-background-color)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-[180px] h-9 cursor-pointer"
+                  className="flex items-center justify-between rounded-md border border-[var(--sub-background-color)] bg-[var(--background-color)] px-2 md:px-3 py-2 text-sm ring-offset-[var(--background-color)] placeholder:text-[var(--sub-heading-text)] focus:outline-none focus:ring-2 focus:ring-[var(--sub-background-color)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-[120px] md:w-[180px] h-9 cursor-pointer"
                   onClick={() => setDropdownOpen((open) => !open)}
                 >
-                  <span className="text-[var(--heading-text)]">
+                  <span className="text-[var(--heading-text)] truncate">
                     {selectedCategoryFilter || "All Time"}
                   </span>
                   <svg
@@ -579,7 +670,7 @@ const Transactions = () => {
                   </div>
                   {/* next and prev button */}
                   <div className="flex items-center justify-between space-x-2 py-4">
-                    <div className="text-sm text-[var(--sub-heading-text)]">
+                    <div className="hidden md:block text-sm text-[var(--sub-heading-text)]">
                       Showing {currentTransactions.length} of{" "}
                       {searchedTransactions.length} transaction(s)
                     </div>

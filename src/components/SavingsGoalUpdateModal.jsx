@@ -1,8 +1,19 @@
 import React, { useEffect, useState } from "react";
+import {
+  getCurrencySymbol,
+  formatCurrency as formatCurrencyUtil,
+} from "../lib/userPreferences";
 
 const SavingsGoalUpdateModal = ({ open, onClose, goal, onUpdate }) => {
   const [action, setAction] = useState("add");
   const [amount, setAmount] = useState("");
+
+  // Get currency symbol from user preferences
+  const [currencySymbol, setCurrencySymbol] = useState(() => {
+    const prefs = localStorage.getItem("fintrack_preferences");
+    const currency = prefs ? JSON.parse(prefs).currency : "USD - US Dollar";
+    return getCurrencySymbol(currency);
+  });
 
   useEffect(() => {
     setAmount("");
@@ -11,13 +22,15 @@ const SavingsGoalUpdateModal = ({ open, onClose, goal, onUpdate }) => {
 
   if (!open || !goal) return null;
 
-  // Parse "$800.00 / $1,000.00" to [800, 1000]
+  // Parse "$800.00 / $1,000.00" or "€800.00 / €1,000.00" to [800, 1000]
   const parseAmounts = (amtStr) => {
     if (!amtStr) return [0, 0];
-    const match = amtStr.match(/\$([\d,]+\.\d{2})\s*\/\s*\$([\d,]+\.\d{2})/);
-    if (match) {
-      const saved = parseFloat(match[1].replace(/,/g, ""));
-      const target = parseFloat(match[2].replace(/,/g, ""));
+    const parts = amtStr
+      .split("/")
+      .map((s) => s.trim().replace(/[^\d.-]/g, ""));
+    if (parts.length === 2) {
+      const saved = parseFloat(parts[0]) || 0;
+      const target = parseFloat(parts[1]) || 0;
       return [saved, target];
     }
     return [0, 0];
@@ -25,13 +38,10 @@ const SavingsGoalUpdateModal = ({ open, onClose, goal, onUpdate }) => {
 
   const [currentSaved, targetAmount] = parseAmounts(goal.amt);
   const remaining = targetAmount - currentSaved;
-  const usage = targetAmount > 0 ? Math.round((currentSaved / targetAmount) * 100) : 0;
+  const usage =
+    targetAmount > 0 ? Math.round((currentSaved / targetAmount) * 100) : 0;
 
-  const formatCurrency = (amt) =>
-    `$${amt.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
+  const formatCurrency = (amt) => formatCurrencyUtil(amt);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -46,7 +56,8 @@ const SavingsGoalUpdateModal = ({ open, onClose, goal, onUpdate }) => {
     }
 
     const newRemain = Math.max(0, targetAmount - newSaved);
-    const newUsage = targetAmount > 0 ? Math.round((newSaved / targetAmount) * 100) : 0;
+    const newUsage =
+      targetAmount > 0 ? Math.round((newSaved / targetAmount) * 100) : 0;
 
     const updatedGoal = {
       ...goal,
@@ -81,25 +92,33 @@ const SavingsGoalUpdateModal = ({ open, onClose, goal, onUpdate }) => {
             <div className="bg-[var(--sub-hover)] rounded-lg p-4 space-y-2 text-[var(--heading-text)]">
               <div className="flex justify-between text-sm">
                 <span>Current saved:</span>
-                <span className="font-medium">{formatCurrency(currentSaved)}</span>
+                <span className="font-medium">
+                  {formatCurrency(currentSaved)}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Goal target:</span>
-                <span className="font-medium">{formatCurrency(targetAmount)}</span>
+                <span className="font-medium">
+                  {formatCurrency(targetAmount)}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Remaining:</span>
-                <span className="font-medium text-green-500">{formatCurrency(remaining)}</span>
+                <span className="font-medium text-green-500">
+                  {formatCurrency(remaining)}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Progress:</span>
-                <span className={`font-medium ${usage > 50 ? "text-green-600" : "text-green-500"}`}>{usage}%</span>
+                <span
+                  className={`font-medium ${usage > 50 ? "text-green-600" : "text-green-500"}`}
+                >
+                  {usage}%
+                </span>
               </div>
             </div>
             <div className="space-y-2 text-[var(--heading-text)]">
-              <div className="text-sm font-medium leading-none">
-                Action
-              </div>
+              <div className="text-sm font-medium leading-none">Action</div>
               {/* Toggle Button */}
               <div className="flex items-center gap-4">
                 <button
@@ -114,39 +133,73 @@ const SavingsGoalUpdateModal = ({ open, onClose, goal, onUpdate }) => {
                 >
                   {action === "add" ? (
                     <>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-icon lucide-plus w-4 h-4 mr-1"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                      Add 
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="lucide lucide-plus-icon lucide-plus w-4 h-4 mr-1"
+                      >
+                        <path d="M5 12h14" />
+                        <path d="M12 5v14" />
+                      </svg>
+                      Add
                     </>
                   ) : (
                     <>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-minus-icon lucide-minus w-4 h-4 mr-1"><path d="M5 12h14"/></svg>
-                      Subtract 
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="lucide lucide-minus-icon lucide-minus w-4 h-4 mr-1"
+                      >
+                        <path d="M5 12h14" />
+                      </svg>
+                      Subtract
                     </>
                   )}
                 </button>
                 <span className="text-xs text-[var(--sub-heading-text)]">
-                  {action === "add"
-                    ? "Switch to subtract"
-                    : "Switch to add"}
+                  {action === "add" ? "Switch to subtract" : "Switch to add"}
                 </span>
               </div>
             </div>
             <div className="space-y-2">
-              <label htmlFor="amount" className="text-sm text-[var(--heading-text)] font-medium leading-none">
+              <label
+                htmlFor="amount"
+                className="text-sm text-[var(--heading-text)] font-medium leading-none"
+              >
                 Amount *
               </label>
               <div className="relative mt-2">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[var(--sub-heading-text)]">$</span>
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[var(--sub-heading-text)]">
+                  {currencySymbol}
+                </span>
                 <input
                   type="number"
                   className="flex h-10 w-full rounded-md border border-[var(--border-color)] bg-[var(--background-color)] px-3 py-2 text-sm text-[var(--heading-text)] ring-offset-[var(--sub-background-color)] placeholder:text-[var(--sub-heading-text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--sub-background-color)] focus-visible:ring-offset-2 pl-7"
                   placeholder="0.00"
                   step="0.01"
                   min="0.01"
-                  max={action === "add" ? Math.max(0, targetAmount - currentSaved) : currentSaved}
+                  max={
+                    action === "add"
+                      ? Math.max(0, targetAmount - currentSaved)
+                      : currentSaved
+                  }
                   id="amount"
                   value={amount}
-                  onChange={e => setAmount(e.target.value)}
+                  onChange={(e) => setAmount(e.target.value)}
                   required
                 />
               </div>
