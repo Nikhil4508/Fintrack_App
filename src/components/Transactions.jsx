@@ -408,26 +408,13 @@ const Transactions = () => {
                 Expenses
               </button>
             </div>
-            {/* searchbar */}
-            <div className="flex gap-2 flex-1">
-              <div className="grid w-full flex-1 md:max-w-sm items-center gap-1.5">
-                <label
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 sr-only"
-                  htmlFor="search"
-                ></label>
-                <input
-                  id="search"
-                  placeholder="search transactions..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setCurrentPage(1); //reset to first page on search
-                  }}
-                  className="flex w-full rounded-md border border-[var(--sub-background-color)] bg-[var(--background-color)] px-3 py-2 text-sm text-[var(--heading-text)] ring-offset-[var(--background-color)] file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-[var(--sub-heading-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sub-background-color)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 h-9"
-                />
-              </div>
+            {/* searchbar and filter */}
+            <div className="flex flex-wrap gap-2 justify-end items-center">
               {/* category wise dropdown */}
-              <div className="relative flex-shrink-0" ref={dropdownRef}>
+              <div
+                className="relative flex-shrink-0 order-1 sm:order-2"
+                ref={dropdownRef}
+              >
                 <button
                   type="button"
                   className="flex items-center justify-between rounded-md border border-[var(--sub-background-color)] bg-[var(--background-color)] px-2 md:px-3 py-2 text-sm ring-offset-[var(--background-color)] placeholder:text-[var(--sub-heading-text)] focus:outline-none focus:ring-2 focus:ring-[var(--sub-background-color)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-[120px] md:w-[180px] h-9 cursor-pointer"
@@ -467,6 +454,23 @@ const Transactions = () => {
                     ))}
                   </ul>
                 )}
+              </div>
+              {/* searchbar */}
+              <div className="w-full sm:w-auto sm:max-w-sm order-2 sm:order-1">
+                <label
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 sr-only"
+                  htmlFor="search"
+                ></label>
+                <input
+                  id="search"
+                  placeholder="search transactions..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setCurrentPage(1); //reset to first page on search
+                  }}
+                  className="flex w-full rounded-md border border-[var(--sub-background-color)] bg-[var(--background-color)] px-3 py-2 text-sm text-[var(--heading-text)] ring-offset-[var(--background-color)] file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-[var(--sub-heading-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sub-background-color)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 h-9"
+                />
               </div>
             </div>
           </div>
@@ -584,7 +588,7 @@ const Transactions = () => {
                                     {items.amt}
                                   </div>
                                 </td>
-                                <td className="p-4 align-middle  ">
+                                <td className="p-4 align-middle relative">
                                   <button
                                     className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-[var(--sub-background-color)] text-[var(--heading-text)] h-8 w-8 cursor-pointer "
                                     type="button"
@@ -595,7 +599,7 @@ const Transactions = () => {
                                     <items.icon />
                                   </button>
                                   {actionMenuOpenId === items.id && (
-                                    <div className="transaction-action-menu absolute right-20 z-20 mt-2 w-40 bg-[var(--background-color)] border border-[var(--border-color)] rounded-md shadow-lg p-1">
+                                    <div className="transaction-action-menu absolute right-10 z-20 mt-2 w-40 bg-[var(--background-color)] border border-[var(--border-color)] rounded-md shadow-lg p-1">
                                       <div className=" p-2 text-sm font-semibold text-[var(--heading-text)] leading-none tracking-tight mb-2">
                                         Actions
                                       </div>
