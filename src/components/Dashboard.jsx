@@ -460,7 +460,7 @@ const Dashboard = () => {
 
       <div className="space-y-4">
         {/* tab buttons */}
-        <div className="inline-flex h-10 items-center justify-center rounded-md bg-[var(--sub-background-color)] p-1 text-[var(--sub-heading-text)] ">
+        <div className="grid grid-cols-2 gap-1 max-[473px]:grid-rows-2 min-[473px]:inline-flex min-[473px]:h-10 min-[473px]:items-center min-[473px]:justify-center rounded-md bg-[var(--sub-background-color)] p-1 text-[var(--sub-heading-text)]">
           {["Overview", "Budget", "Savings Goals", "Transactions"].map(
             (tab) => (
               <button
