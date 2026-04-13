@@ -357,7 +357,7 @@ const Budgets = () => {
             >
               <div
                 data-radix-scroll-area-viewport
-                className="h-full w-full rounded-[inherit]"
+                className="w-full rounded-[inherit]"
               >
                 <div className="">
                   <div className="space-y-6 ">

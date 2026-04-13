@@ -316,7 +316,7 @@ const Transactions = () => {
     // If amount sort is active, sort by amount
     sortedTransactions.sort((a, b) => {
       // Remove $ and commas, convert to float, handle +/-
-      const parseAmt = (amt) => parseFloat(amt.replace(/[^0-9.-]+/g, ""));
+      const parseAmt = (amt) => parseFloat(amt.replace(/[^0-9.-]+/g, "")) || 0;
       const aVal = parseAmt(a.amt);
       const bVal = parseAmt(b.amt);
       return amtSortAsc ? aVal - bVal : bVal - aVal;

@@ -14,7 +14,7 @@ const Applayout = () => {
         setIsMobileMenuOpen={setIsMobileMenuOpen}
       />
       <div className="flex flex-1 relative justify-center bg-[var(--background-main)]">
-        <div className="flex flex-1 relative max-w-[1280px] w-full">
+        <div className="flex flex-1 relative max-w-[1440px] w-full">
           <Sidebar
             isMobileMenuOpen={isMobileMenuOpen}
             setIsMobileMenuOpen={setIsMobileMenuOpen}

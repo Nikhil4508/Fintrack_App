@@ -370,7 +370,7 @@ const SavingsGoals = () => {
               dir="ltr"
               className="relative overflow-y-scroll h-[400px] custom-scrollbar"
             >
-              <div className="h-full w-full rounded-[inherit]">
+              <div className="w-full rounded-[inherit]">
                 <div className="">
                   <div className="space-y-6 ">
                     {savingBudgetCards.length === 0 ? (

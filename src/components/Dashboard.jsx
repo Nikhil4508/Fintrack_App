@@ -82,68 +82,69 @@ const getInitialTransactions = () => {
   return isDemoUser() ? initialTransactions : [];
 };
 
-const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div
-        style={{
-          background: "var(--background-color, #1a1a1a)",
-          color: "var(--heading-text, #fff)",
-          border: "1px solid var(--border-color, #333)",
-          borderRadius: 12,
-          padding: "16px",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-          minWidth: "180px",
-        }}
-      >
+const Dashboard = () => {
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
         <div
           style={{
-            fontWeight: 700,
-            marginBottom: 12,
-            fontSize: "14px",
-            color: "var(--heading-text)",
-            borderBottom: "1px solid var(--border-color, #333)",
-            paddingBottom: 8,
+            background: "var(--background-color, #1a1a1a)",
+            color: "var(--heading-text, #fff)",
+            border: "1px solid var(--border-color, #333)",
+            borderRadius: 12,
+            padding: "16px",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+            minWidth: "180px",
           }}
         >
-          {label}
-        </div>
-        {payload.map((entry, idx) => (
           <div
-            key={idx}
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: idx < payload.length - 1 ? 8 : 0,
-              fontSize: "13px",
+              fontWeight: 700,
+              marginBottom: 12,
+              fontSize: "14px",
+              color: "var(--heading-text)",
+              borderBottom: "1px solid var(--border-color, #333)",
+              paddingBottom: 8,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div
-                style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: 3,
-                  background: entry.color,
-                }}
-              />
-              <span style={{ color: "var(--sub-heading-text, #aaa)" }}>
-                {entry.name}:
+            {label}
+          </div>
+          {payload.map((entry, idx) => (
+            <div
+              key={idx}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: idx < payload.length - 1 ? 8 : 0,
+                fontSize: "13px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div
+                  style={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: 3,
+                    background: entry.color,
+                  }}
+                />
+                <span style={{ color: "var(--sub-heading-text, #aaa)" }}>
+                  {entry.name}:
+                </span>
+              </div>
+              <span style={{ color: entry.color, fontWeight: 600 }}>
+                {currencySymbol}
+                {entry.value.toLocaleString()}
               </span>
             </div>
-            <span style={{ color: entry.color, fontWeight: 600 }}>
-              ${entry.value.toLocaleString()}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
-  }
-  return null;
-};
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
 
-const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("Overview");
   const [currencySymbol, setCurrencySymbol] = useState(() => {
     const prefs = localStorage.getItem("fintrack_preferences");
@@ -289,7 +290,7 @@ const Dashboard = () => {
   const parseAmount = (amtStr) => {
     if (!amtStr) return 0;
     // Remove all except digits, minus, dot
-    return parseFloat(amtStr.replace(/[^0-9.-]+/g, ""));
+    return parseFloat(amtStr.replace(/[^0-9.-]+/g, "")) || 0;
   };
 
   // Calculate Income, Expenses, Total Balance
@@ -318,32 +319,36 @@ const Dashboard = () => {
   );
 
   // Dynamic card data
+  const formatAmountOnly = (val) => {
+    return new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Math.abs(val));
+  };
+
   const cardData = [
     {
       id: 1,
       title: "Total Balance",
-      price: formatCurrency(totalBalance).replace(/^\$/, ""),
+      price: (totalBalance < 0 ? "-" : "") + formatAmountOnly(totalBalance),
       desc: "",
     },
     {
       id: 2,
       title: "Income",
-      price: formatCurrency(income).replace(/^\$|^€|^£|^¥|^C\$|^A\$|^₹/, ""),
+      price: formatAmountOnly(income),
       desc: "",
     },
     {
       id: 3,
       title: "Expenses",
-      price: formatCurrency(Math.abs(expenses)).replace(
-        /^\$|^€|^£|^¥|^C\$|^A\$|^₹/,
-        "",
-      ),
+      price: formatAmountOnly(expenses),
       desc: "",
     },
     {
       id: 4,
       title: "Savings",
-      price: formatCurrency(savings).replace(/^\$|^€|^£|^¥|^C\$|^A\$|^₹/, ""),
+      price: formatAmountOnly(savings),
       desc: "",
     },
   ];
@@ -648,8 +653,8 @@ const Dashboard = () => {
                   </p>
                 </div>
                 <div className="p-6 pt-0">
-                  <div className="relative overflow-hidden h-[300px] ">
-                    <div className="h-full w-full rounded-[inherit]">
+                  <div className="relative overflow-y-auto h-[300px] custom-scrollbar">
+                    <div className="w-full rounded-[inherit]">
                       <div className="">
                         {recentTransactions.map((rtx) => (
                           <div key={rtx.id} className="flex items-center mb-4">
@@ -696,8 +701,8 @@ const Dashboard = () => {
                 </p>
               </div>
               <div className="p-6 pt-0">
-                <div className="relative overflow-hidden h-[400px]">
-                  <div className="h-full w-full rounded-[inherit]">
+                <div className="relative overflow-y-auto h-[400px] custom-scrollbar">
+                  <div className="w-full rounded-[inherit]">
                     <div>
                       <div className="space-y-6">
                         {latestFiveBudgets.map((budget, id) => {
@@ -760,10 +765,10 @@ const Dashboard = () => {
                 </p>
               </div>
               <div className="p-6 pt-0">
-                <div dir="ltr" className="relative overflow-hidden h-[400px]">
+                <div dir="ltr" className="relative overflow-y-auto h-[400px] custom-scrollbar">
                   <div
                     data-radix-scroll-area-viewport
-                    className="h-full w-full rounded-[inherit]"
+                    className="w-full rounded-[inherit]"
                   >
                     <div>
                       <div className="space-y-6">
@@ -829,8 +834,8 @@ const Dashboard = () => {
                 </p>
               </div>
               <div className="p-6 pt-0">
-                <div dir="ltr" className="relative overflow-hidden ">
-                  <div className="h-full w-full rounded-[inherit]">
+                <div dir="ltr" className="relative overflow-y-auto h-[400px] custom-scrollbar">
+                  <div className="w-full rounded-[inherit]">
                     <div className="">
                       <ul className="space-y-4">
                         {transactions

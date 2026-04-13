@@ -84,7 +84,7 @@ const Header = ({ isMobileMenuOpen, setIsMobileMenuOpen }) => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[var(--border-color)] bg-[var(--background-color)] backdrop-blur-sm supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto max-w-[1280px] px-6 flex h-14 items-center">
+      <div className="mx-auto max-w-[1440px] px-6 flex h-14 items-center">
         <div className="mr-4 flex text-[var(--heading-text)]">
           <Link to="/dashboard" className="mr-6 flex items-center space-x-2">
             <svg
