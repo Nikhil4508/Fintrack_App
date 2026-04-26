@@ -21,7 +21,7 @@ const Hero = () => {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 w-full border-b border-[var(--border-color)] bg-[var(--background-color)]">
-        <div className="mx-auto max-w-[1280px] px-6 flex h-14 items-center">
+        <div className="mx-auto px-6 flex h-14 items-center">
           <div className="mr-4 flex text-[var(--heading-text)]">
             <Link to="/" className="mr-6  flex items-center space-x-2">
               <svg
@@ -62,10 +62,10 @@ const Hero = () => {
       </header>
       <main className="flex-1 bg-[var(--background-main)]">
         <section className="w-full py-12 md:py-24 lg:py-32np ">
-          <div className="mx-auto max-w-[1280px] px-4 md:px-6">
+          <div className="mx-auto px-4 md:px-6">
             <div className="grid gap-6 lg:grid-cols-2 lg:gap-12">
               <div className="flex flex-col justify-center space-y-2">
-                <div className="space-y-2 ">
+                <div className="space-y-2">
                   <div className="text-3xl text-[var(--heading-text)] font-bold tracking-tighter sm:text-5xl">
                     Take control of your finances
                   </div>
